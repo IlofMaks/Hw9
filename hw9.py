@@ -1,11 +1,8 @@
-from typing import Dict
-
-USERS: Dict[str,str] = {}
-EXIT_FLAG = False
+USERS = {}
 
 # decorator
 def error_handler(func):
-    def inner(args):
+    def inner(*args):
         try:
             result = func(*args)
             return result
@@ -17,16 +14,15 @@ def error_handler(func):
             return 'Enter user name'
     return inner
 
-def hello_user(_) -> str:
-    return "How can I help you?"
+def hello_user():
+    return "Whats up"
 
 
-def unknown_command(_) -> str:
-    return "unknown_command"
+def unknown_command(user_input):
+    return f"unknown_command {user_input}"
 
-def exit(_) -> None:
-    global EXIT_FLAG
-    EXIT_FLAG = True
+def close_app():
+    exit('Good Bye')
 
 @error_handler
 def add_user(name, phone):
@@ -34,21 +30,25 @@ def add_user(name, phone):
     return f'User {name} added!'
 
 @error_handler
-def change_phone(name: str, phone: str) -> str:
-    USERS[name] = phone
-    return f'У {name} тепер телефон: {phone}'
+def change_phone(name: str, new_phone: str) -> str:
+    if name in USERS:
+        old_phone = USERS[name]
+        USERS[name] = new_phone
+        return f'User {name} has new number: {new_phone}, old phone number: {old_phone}'
+    else:
+        return f'This user: {name} is not in your phone book'
 
-def show_all(_) -> str:
+
+def show_all(*args) -> str:
+    if not USERS:
+        return 'No users in the phone book'
     result = ''
     for name, phone in USERS.items():
         result += f'Name: {name} phone: {phone}\n'
     return result
 
 def show_phone(name:str) -> str:
-    phone = USERS.get(name)
-    if phone is None:
-        return "User not found"
-    return f"{name}'s phone number is {phone}\n"
+    return f"{name}'s phone number is {USERS[name]}\n"
 
 HANDLERS = {
     'hello': hello_user,
@@ -56,55 +56,40 @@ HANDLERS = {
     'change': change_phone,
     'phone': show_phone,
     'show all': show_all,
-    'exit': exit,
-    'goodbye': exit,
-    'close': exit,
+    'exit': close_app,
+    'good bye': close_app,
+    'close': close_app,
 }
 
 def parse_input(user_input):
-    args = user_input.split()
-    command = args[0].lower()
-
-    if command == 'add':
-        if len(args) != 3:
-            return unknown_command, []
-        name, phone = args[1:]
-        return add_user, [name, phone]
-
-    if command == 'change':
-        if len(args) != 3:
-            return unknown_command, []
-        name, phone = args[1:]
-        return change_phone, [name, phone]
-
-    if command == 'phone':
-        if len(args) != 2:
-            return unknown_command, []
-        name = args[1]
-        return show_phone, name
-
-    if command == 'show' and len(args) == 2 and args[1] == 'all':
-        return show_all, []
-
-    if command in ('hello', 'hi'):
-        return hello_user, []
-
-    if command in ('exit', 'quit', 'goodbye', 'close'):
-        return exit, []
-
-    return unknown_command, []
-
+    parts = user_input.split()
+    user_input_name = parts[0]
+    if user_input_name == 'show' and 'all' in parts:
+        user_input_name = 'show all'
+        user_input_args = []
+    elif user_input_name == 'good' and 'bye' in parts:
+        user_input_name = 'good bye'
+        user_input_args = []
+    elif len(parts)>1:
+        user_input_args = parts[1:]
+    else:
+        user_input_args=[]
+    return user_input_name, user_input_args
 
 def main():
-    while not EXIT_FLAG:
+    print (hello_user())
+    while True:
         # example: add Petro 0991234567
-        user_input = input('Please enter command and args: ')
-        handler, args = parse_input(user_input)
-        result = handler(args)
-        if not result:
-            print('Good Bye')
-            break
-        print(result)
+        user_input_line = input('Please enter command and args: ').strip().lower()
+        user_input_name, user_input_args = parse_input(user_input_line)
+        if user_input_name in HANDLERS:
+            try:
+                result = HANDLERS[user_input_name](*user_input_args)
+                print(result)
+            except TypeError:
+                print('Invalid input')
+        else:
+            print(unknown_command(user_input_name))
 
 if __name__ == '__main__':
     main()
